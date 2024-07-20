@@ -1,0 +1,32 @@
+[package]
+name = "mobile"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+name = "mobile"
+crate-type = ["staticlib", "cdylib"]
+
+[dependencies]
+peakr= { path = ".." } # ToDo
+bevy = { version = "0.14", default-features = false }
+
+[target."cfg(target_os = \"android\")".dependencies.cpal]
+version = "0.15"
+features = ["oboe-shared-stdcxx"]
+
+[package.metadata.android]
+package = "io.peakr.game"  
+apk_name = "Bevy Game"  
+assets = "../assets"
+strip = "strip"
+resources = "../build/android/res"
+build_targets = ["aarch64-linux-android"]
+
+[package.metadata.android.sdk]
+target_sdk_version = 33
+
+[package.metadata.android.application]
+icon = "@mipmap/icon"
+label = "Bevy Game" 
