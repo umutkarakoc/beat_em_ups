@@ -3,18 +3,19 @@ use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
 use bevy_kira_audio::AudioSource;
 
-pub struct LoadingPlugin;
+pub struct AssetsPlugin;
 
 /// This plugin loads all assets using [`AssetLoader`] from a third party bevy plugin
 /// Alternatively you can write the logic to load assets yourself
 /// If interested, take a look at <https://bevy-cheatbook.github.io/features/assets.html>
-impl Plugin for LoadingPlugin {
+impl Plugin for AssetsPlugin {
     fn build(&self, app: &mut App) {
         app.add_loading_state(
             LoadingState::new(GameState::Loading)
                 .continue_to_state(GameState::Menu)
                 .load_collection::<AudioAssets>()
-                .load_collection::<TextureAssets>(),
+                .load_collection::<TextureAssets>()
+                .load_collection::<KnightAssets>(),
         );
     }
 }
@@ -32,4 +33,19 @@ pub struct AudioAssets {
 pub struct TextureAssets {
     #[asset(path = "bevy.png")]
     pub bevy: Handle<Image>,
+
+    #[asset(path = "bg.png")]
+    pub bg: Handle<Image>,
+}
+
+#[derive(AssetCollection, Resource)]
+pub struct KnightAssets {
+    #[asset(texture_atlas_layout(tile_size_x = 128, tile_size_y = 128, columns = 4, rows = 1))]
+    pub idle_layout: Handle<TextureAtlasLayout>,
+
+    #[asset(path = "knight/idle.png")]
+    pub idle: Handle<Image>,
+
+    #[asset(path = "knight/walk.png")]
+    pub walk: Handle<Image>,
 }

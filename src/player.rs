@@ -1,33 +1,50 @@
-use crate::loading::TextureAssets;
+use crate::assets::KnightAssets;
+use crate::sprite_sheet::Animation;
 use crate::GameState;
 use bevy::prelude::*;
 
 pub struct PlayerPlugin;
 
 #[derive(Component)]
-pub struct Player;
+pub struct Knight;
+
+#[derive(Component)]
+pub struct Idle;
+
+#[derive(Component)]
+pub struct Walk;
+
+#[derive(Component)]
+pub struct Run;
+
+#[derive(Component)]
+pub struct Attack;
+
+#[derive(Component)]
+pub struct Jump;
+
+pub struct SpriteSheet {
+    pub texture: Handle<Image>,
+    pub layout: Handle<TextureAtlasLayout>,
+}
 
 /// This plugin handles player related stuff like movement
 /// Player logic is only active during the State `GameState::Playing`
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(GameState::Playing), spawn_player)
-            .add_systems(Update, rotate.run_if(in_state(GameState::Playing)));
+        app.add_systems(OnEnter(GameState::Playing), spawn_player);
     }
 }
 
-fn spawn_player(mut commands: Commands, textures: Res<TextureAssets>) {
-    commands
-        .spawn(SpriteBundle {
-            texture: textures.bevy.clone(),
+fn spawn_player(mut commands: Commands, assets: Res<KnightAssets>) {
+    commands.spawn((
+        Knight,
+        Animation::new(1000, 0, 3),
+        TextureAtlas::from(assets.idle_layout.clone()),
+        SpriteBundle {
+            texture: assets.idle.clone(),
             transform: Transform::from_translation(Vec3::new(0., 0., 1.)),
             ..Default::default()
-        })
-        .insert(Player);
-}
-
-fn rotate(time: Res<Time>, mut player: Query<&mut Transform, With<Player>>) {
-    for mut t in &mut player {
-        t.rotate_z(-2. * time.delta_seconds());
-    }
+        },
+    ));
 }

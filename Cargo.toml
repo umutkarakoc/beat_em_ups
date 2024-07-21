@@ -63,10 +63,10 @@ bevy = { version = "0.14", default-features = false, features = [
     "smaa_luts",
     "default_font",
     "webgl2",
-    "sysinfo_plugin",
+    "sysinfo_plugin"
 ] }
 bevy_kira_audio = { version = "0.20" }
-bevy_asset_loader = { version = "0.21" }
+bevy_asset_loader = { version = "0.21", features = ["2d"] }
 rand = { version = "0.8.3" }
 webbrowser = { version = "1", features = ["hardened"] }
 
@@ -75,6 +75,7 @@ winit = { version = "0.30", default-features = false }
 image = { version = "0.25", default-features = false }
 ## This greatly improves WGPU's performance due to its heavy use of trace! calls
 log = { version = "0.4", features = ["max_level_debug", "release_max_level_warn"] }
+bevy-inspector-egui = "0.25.1"
 
 [build-dependencies]
 embed-resource = "1"

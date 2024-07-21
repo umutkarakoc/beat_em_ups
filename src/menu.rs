@@ -1,4 +1,3 @@
-use crate::loading::TextureAssets;
 use crate::GameState;
 use bevy::prelude::*;
 
@@ -37,9 +36,8 @@ struct Menu;
 #[derive(Component)]
 struct PlayButton;
 
-fn setup_menu(mut commands: Commands, textures: Res<TextureAssets>) {
+fn setup_menu(mut commands: Commands) {
     info!("menu");
-    commands.spawn(Camera2dBundle::default());
     commands
         .spawn((
             NodeBundle {
