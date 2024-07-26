@@ -6,6 +6,15 @@ use bevy::prelude::*;
 pub struct PlayerPlugin;
 
 #[derive(Component)]
+pub struct Player;
+
+#[derive(Component)]
+pub struct Enemy;
+
+#[derive(Component)]
+pub struct Samurai;
+
+#[derive(Component)]
 pub struct Knight;
 
 #[derive(Component)]
@@ -36,14 +45,27 @@ impl Plugin for PlayerPlugin {
     }
 }
 
-fn spawn_player(mut commands: Commands, assets: Res<KnightAssets>) {
+fn spawn_player(mut commands: Commands, knight: Res<KnightAssets>, samurai: Res<KnightAssets>) {
     commands.spawn((
+        Player,
+        Samurai,
+        Animation::new(1000, 0, 3),
+        TextureAtlas::from(samurai.idle_layout.clone()),
+        SpriteBundle {
+            texture: samurai.idle.clone(),
+            transform: Transform::from_translation(Vec3::new(200., 0., 1.)),
+            ..Default::default()
+        },
+    ));
+
+    commands.spawn((
+        Enemy,
         Knight,
         Animation::new(1000, 0, 3),
-        TextureAtlas::from(assets.idle_layout.clone()),
+        TextureAtlas::from(knight.idle_layout.clone()),
         SpriteBundle {
-            texture: assets.idle.clone(),
-            transform: Transform::from_translation(Vec3::new(0., 0., 1.)),
+            texture: knight.idle.clone(),
+            transform: Transform::from_translation(Vec3::new(-200., 0., 1.)),
             ..Default::default()
         },
     ));

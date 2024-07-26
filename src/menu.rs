@@ -1,4 +1,4 @@
-use crate::GameState;
+use crate::{assets::TextureAssets, GameState};
 use bevy::prelude::*;
 
 pub struct MenuPlugin;
@@ -36,8 +36,16 @@ struct Menu;
 #[derive(Component)]
 struct PlayButton;
 
-fn setup_menu(mut commands: Commands) {
+fn setup_menu(mut commands: Commands, assets: Res<TextureAssets>) {
     info!("menu");
+    commands.spawn((
+        Menu,
+        SpriteBundle {
+            texture: assets.bg.clone(),
+            ..default()
+        },
+    ));
+
     commands
         .spawn((
             NodeBundle {
@@ -59,7 +67,7 @@ fn setup_menu(mut commands: Commands) {
                 .spawn((
                     ButtonBundle {
                         style: Style {
-                            width: Val::Px(140.0),
+                            width: Val::Px(400.0),
                             height: Val::Px(50.0),
                             justify_content: JustifyContent::Center,
                             align_items: AlignItems::Center,

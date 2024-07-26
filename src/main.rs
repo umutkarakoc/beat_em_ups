@@ -2,14 +2,10 @@
 #![allow(clippy::type_complexity)]
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 use bevy::asset::AssetMetaCheck;
-use bevy::prelude::*;
-use bevy::render::texture::{DefaultImageSampler, ImageLoaderSettings, ImageSampler};
-use bevy::window::{PrimaryWindow, WindowResolution};
-use bevy::winit::WinitWindows;
-use bevy::DefaultPlugins;
-use std::io::Cursor;
-use winit::window::Icon;
+use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
+use level::LevelPlugin;
 mod assets;
+mod level;
 mod menu;
 mod player;
 mod sprite_sheet;
@@ -17,31 +13,32 @@ use crate::assets::AssetsPlugin;
 use crate::menu::MenuPlugin;
 use crate::player::PlayerPlugin;
 use crate::sprite_sheet::SpriteSheetPlugin;
-use assets::TextureAssets;
 use bevy::input::common_conditions::input_toggle_active;
-use bevy_inspector_egui::quick::WorldInspectorPlugin;
-
-#[cfg(debug_assertions)]
-use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use bevy::prelude::*;
+use bevy::window::{PrimaryWindow, WindowResolution};
+use bevy::winit::WinitWindows;
+use bevy::DefaultPlugins;
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
+use std::io::Cursor;
+use winit::window::Icon;
+
+use bevy::app::App;
 use bevy::text::TextSettings;
-use bevy::{app::App, render::camera::ScalingMode};
 
 fn main() {
     let mut app = App::new();
     app.insert_resource(Msaa::Off)
-        .insert_resource(ClearColor(Color::rgb(0.0, 0.0, 0.0)))
+        .insert_resource(ClearColor(Color::srgba(0.0, 0.0, 0.0, 1.)))
         .insert_resource(TextSettings {
             allow_dynamic_font_size: true,
             ..default()
         })
-        .init_state::<GameState>()
         .add_plugins(
             DefaultPlugins
                 .set(WindowPlugin {
                     primary_window: Some(Window {
                         title: "Bevy game".to_string(), // ToDo
-                        resolution: WindowResolution::new(480., 270.),
+                        resolution: WindowResolution::new(480. * 3., 270. * 3.),
                         // Bind to canvas included in `index.html`
                         canvas: Some("#bevy".to_owned()),
                         fit_canvas_to_parent: true,
@@ -57,15 +54,21 @@ fn main() {
                 })
                 .set(ImagePlugin::default_nearest()),
         )
-        .add_systems(Startup, (add_camera, set_window_icon))
-        .add_plugins((SpriteSheetPlugin, AssetsPlugin, MenuPlugin, PlayerPlugin))
-        .add_systems(OnEnter(GameState::Playing), add_bg);
+        .add_systems(Startup, set_window_icon)
+        .add_plugins((
+            SpriteSheetPlugin,
+            AssetsPlugin,
+            MenuPlugin,
+            LevelPlugin,
+            PlayerPlugin,
+        ))
+        .insert_state(GameState::Loading);
 
     #[cfg(debug_assertions)]
     {
         app.add_plugins((
             FrameTimeDiagnosticsPlugin,
-            LogDiagnosticsPlugin::default(),
+            // LogDiagnosticsPlugin::default(),
             WorldInspectorPlugin::new().run_if(input_toggle_active(false, KeyCode::Escape)),
         ));
     }
@@ -103,24 +106,4 @@ enum GameState {
     Playing,
     // Here the menu is drawn and waiting for player interaction
     Menu,
-}
-
-fn add_camera(mut commands: Commands) {
-    commands.spawn(Camera2dBundle {
-        transform: Transform::from_xyz(0.0, 0.0, 100.),
-        projection: OrthographicProjection {
-            scaling_mode: ScalingMode::FixedVertical(480.),
-            ..default()
-        },
-        ..default()
-    });
-}
-
-fn add_bg(mut commands: Commands, assets: Res<TextureAssets>) {
-    commands.spawn(
-        (SpriteBundle {
-            texture: assets.bg.clone(),
-            ..default()
-        }),
-    );
 }

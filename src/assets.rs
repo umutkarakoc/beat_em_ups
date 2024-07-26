@@ -48,4 +48,22 @@ pub struct KnightAssets {
 
     #[asset(path = "knight/walk.png")]
     pub walk: Handle<Image>,
+
+    #[asset(path = "knight/run.png")]
+    pub run: Handle<Image>,
+}
+
+#[derive(AssetCollection, Resource)]
+pub struct SamuraiAssets {
+    #[asset(texture_atlas_layout(tile_size_x = 128, tile_size_y = 128, columns = 4, rows = 1))]
+    pub idle_layout: Handle<TextureAtlasLayout>,
+
+    #[asset(path = "samurai/idle.png")]
+    pub idle: Handle<Image>,
+
+    #[asset(path = "samurai/walk.png")]
+    pub walk: Handle<Image>,
+
+    #[asset(path = "samurai/run.png")]
+    pub run: Handle<Image>,
 }
