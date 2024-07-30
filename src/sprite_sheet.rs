@@ -1,6 +1,6 @@
-use std::time::Duration;
+use std::{ops::Deref, time::Duration};
 
-use bevy::prelude::*;
+use bevy::{prelude::*, utils::tracing::Instrument};
 
 #[derive(Component, Deref, DerefMut)]
 pub struct AnimationTimer(Timer);
@@ -19,6 +19,12 @@ pub struct AnimationIndex {
 
 #[derive(Component)]
 pub struct NoRepeat;
+
+#[derive(Component, PartialEq, Eq)]
+pub enum Direction {
+    Left,
+    Right,
+}
 
 #[derive(Event)]
 pub struct Ended(Entity);
@@ -47,7 +53,8 @@ pub struct SpriteSheetPlugin;
 
 impl Plugin for SpriteSheetPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, animate).add_event::<Ended>();
+        app.add_systems(Update, (animate, flip_x))
+            .add_event::<Ended>();
     }
 }
 
@@ -76,5 +83,11 @@ fn animate(
             }
             atlas.index = next;
         }
+    }
+}
+
+fn flip_x(mut sprites: Query<(&mut Sprite, &Direction), Changed<Direction>>) {
+    for (mut sprite, dir) in &mut sprites {
+        sprite.flip_x = if *dir == Direction::Left { true } else { false };
     }
 }

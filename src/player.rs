@@ -1,7 +1,8 @@
-use crate::assets::KnightAssets;
-use crate::sprite_sheet::Animation;
+use crate::assets::{KnightAssets, SamuraiAssets};
+use crate::sprite_sheet::{Animation, Direction};
 use crate::GameState;
 use bevy::prelude::*;
+use std::hash::Hash;
 
 pub struct PlayerPlugin;
 
@@ -32,6 +33,21 @@ pub struct Attack;
 #[derive(Component)]
 pub struct Jump;
 
+pub enum PlayerInput {
+    Key(KeyCode),
+    Mouse(MouseButton),
+}
+#[derive(Component)]
+pub struct LocalController {
+    left: PlayerInput,
+    right: PlayerInput,
+    up: PlayerInput,
+    down: PlayerInput,
+    attack: PlayerInput,
+    defense: PlayerInput,
+    dodge: PlayerInput,
+}
+
 pub struct SpriteSheet {
     pub texture: Handle<Image>,
     pub layout: Handle<TextureAtlasLayout>,
@@ -45,15 +61,25 @@ impl Plugin for PlayerPlugin {
     }
 }
 
-fn spawn_player(mut commands: Commands, knight: Res<KnightAssets>, samurai: Res<KnightAssets>) {
+fn spawn_player(mut commands: Commands, knight: Res<KnightAssets>, samurai: Res<SamuraiAssets>) {
     commands.spawn((
         Player,
+        LocalController {
+            left: PlayerInput::Key(KeyCode::KeyA),
+            right: PlayerInput::Key(KeyCode::KeyD),
+            up: PlayerInput::Key(KeyCode::KeyW),
+            down: PlayerInput::Key(KeyCode::KeyS),
+            attack: PlayerInput::Mouse(MouseButton::Left),
+            defense: PlayerInput::Mouse(MouseButton::Right),
+            dodge: PlayerInput::Key(KeyCode::Space),
+        },
         Samurai,
+        Direction::Right,
         Animation::new(1000, 0, 3),
         TextureAtlas::from(samurai.idle_layout.clone()),
         SpriteBundle {
             texture: samurai.idle.clone(),
-            transform: Transform::from_translation(Vec3::new(200., 0., 1.)),
+            transform: Transform::from_translation(Vec3::new(-200., 0., 1.)),
             ..Default::default()
         },
     ));
@@ -61,11 +87,12 @@ fn spawn_player(mut commands: Commands, knight: Res<KnightAssets>, samurai: Res<
     commands.spawn((
         Enemy,
         Knight,
+        Direction::Left,
         Animation::new(1000, 0, 3),
         TextureAtlas::from(knight.idle_layout.clone()),
         SpriteBundle {
             texture: knight.idle.clone(),
-            transform: Transform::from_translation(Vec3::new(-200., 0., 1.)),
+            transform: Transform::from_translation(Vec3::new(200., 0., 1.)),
             ..Default::default()
         },
     ));

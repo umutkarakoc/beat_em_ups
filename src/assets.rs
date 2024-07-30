@@ -15,7 +15,8 @@ impl Plugin for AssetsPlugin {
                 .continue_to_state(GameState::Menu)
                 .load_collection::<AudioAssets>()
                 .load_collection::<TextureAssets>()
-                .load_collection::<KnightAssets>(),
+                .load_collection::<KnightAssets>()
+                .load_collection::<SamuraiAssets>(),
         );
     }
 }
