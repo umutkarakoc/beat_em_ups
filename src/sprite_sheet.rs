@@ -42,7 +42,7 @@ impl Direction {
 }
 
 #[derive(Event)]
-pub struct Ended(Entity);
+pub struct AnimationEnded(pub Entity);
 
 impl AnimationIndex {
     pub fn new(start: usize, end: usize) -> AnimationIndex {
@@ -90,7 +90,7 @@ pub struct SpriteSheetPlugin;
 impl Plugin for SpriteSheetPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Update, (animate, flip_x))
-            .add_event::<Ended>();
+            .add_event::<AnimationEnded>();
     }
 }
 
@@ -103,7 +103,7 @@ fn animate(
         &mut TextureAtlas,
         Option<&NoRepeat>,
     )>,
-    mut ended: EventWriter<Ended>,
+    mut ended: EventWriter<AnimationEnded>,
 ) {
     for (entity, indices, mut timer, mut atlas, norepeat) in &mut query {
         timer.tick(time.delta());
@@ -111,7 +111,7 @@ fn animate(
             let mut next = atlas.index + 1;
 
             if next > indices.end && norepeat.is_some() {
-                ended.send(Ended(entity));
+                ended.send(AnimationEnded(entity));
                 return;
             }
             if next > indices.end {

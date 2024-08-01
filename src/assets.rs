@@ -68,6 +68,18 @@ pub struct SamuraiAssets {
     #[asset(path = "samurai/idle.png")]
     pub idle: Handle<Image>,
 
+    #[asset(texture_atlas_layout(tile_size_x = 128, tile_size_y = 128, columns = 2, rows = 1))]
+    pub defence_layout: Handle<TextureAtlasLayout>,
+
+    #[asset(path = "samurai/protection.png")]
+    pub defence: Handle<Image>,
+
+    #[asset(texture_atlas_layout(tile_size_x = 128, tile_size_y = 128, columns = 6, rows = 1))]
+    pub dash_layout: Handle<TextureAtlasLayout>,
+
+    #[asset(path = "samurai/roll.png")]
+    pub dash: Handle<Image>,
+
     #[asset(path = "samurai/walk.png")]
     pub walk: Handle<Image>,
 
@@ -76,4 +88,22 @@ pub struct SamuraiAssets {
 
     #[asset(path = "samurai/run.png")]
     pub run: Handle<Image>,
+
+    #[asset(texture_atlas_layout(tile_size_x = 128, tile_size_y = 128, columns = 4, rows = 1))]
+    pub attack1_layout: Handle<TextureAtlasLayout>,
+
+    #[asset(path = "samurai/attack_1.png")]
+    pub attack1: Handle<Image>,
+
+    #[asset(texture_atlas_layout(tile_size_x = 128, tile_size_y = 128, columns = 5, rows = 1))]
+    pub attack2_layout: Handle<TextureAtlasLayout>,
+
+    #[asset(path = "samurai/attack_2.png")]
+    pub attack2: Handle<Image>,
+
+    #[asset(texture_atlas_layout(tile_size_x = 128, tile_size_y = 128, columns = 4, rows = 1))]
+    pub attack3_layout: Handle<TextureAtlasLayout>,
+
+    #[asset(path = "samurai/attack_3.png")]
+    pub attack3: Handle<Image>,
 }
