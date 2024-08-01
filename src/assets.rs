@@ -1,5 +1,8 @@
-use crate::GameState;
-use bevy::prelude::*;
+use crate::{
+    sprite_sheet::{Animation, SpriteAnimation},
+    GameState,
+};
+use bevy::{prelude::*, utils::HashMap};
 use bevy_asset_loader::prelude::*;
 use bevy_kira_audio::AudioSource;
 
@@ -15,8 +18,8 @@ impl Plugin for AssetsPlugin {
                 .continue_to_state(GameState::Menu)
                 .load_collection::<AudioAssets>()
                 .load_collection::<TextureAssets>()
-                .load_collection::<KnightAssets>()
-                .load_collection::<SamuraiAssets>(),
+                .load_collection::<SamuraiAssets>()
+                .load_collection::<KnightAssets>(),
         );
     }
 }
@@ -50,6 +53,9 @@ pub struct KnightAssets {
     #[asset(path = "knight/walk.png")]
     pub walk: Handle<Image>,
 
+    #[asset(texture_atlas_layout(tile_size_x = 128, tile_size_y = 128, columns = 8, rows = 1))]
+    pub run_layout: Handle<TextureAtlasLayout>,
+
     #[asset(path = "knight/run.png")]
     pub run: Handle<Image>,
 }
@@ -64,6 +70,9 @@ pub struct SamuraiAssets {
 
     #[asset(path = "samurai/walk.png")]
     pub walk: Handle<Image>,
+
+    #[asset(texture_atlas_layout(tile_size_x = 128, tile_size_y = 128, columns = 8, rows = 1))]
+    pub run_layout: Handle<TextureAtlasLayout>,
 
     #[asset(path = "samurai/run.png")]
     pub run: Handle<Image>,

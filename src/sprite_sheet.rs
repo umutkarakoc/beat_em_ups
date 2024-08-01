@@ -2,8 +2,8 @@ use std::{ops::Deref, time::Duration};
 
 use bevy::{prelude::*, utils::tracing::Instrument};
 
-#[derive(Component, Deref, DerefMut)]
-pub struct AnimationTimer(Timer);
+#[derive(Component, Deref, DerefMut, Clone)]
+pub struct AnimationTimer(pub Timer);
 
 impl AnimationTimer {
     pub fn new(ms: u64) -> AnimationTimer {
@@ -11,7 +11,7 @@ impl AnimationTimer {
     }
 }
 
-#[derive(Component)]
+#[derive(Component, Clone)]
 pub struct AnimationIndex {
     pub start: usize,
     pub end: usize,
@@ -26,6 +26,21 @@ pub enum Direction {
     Right,
 }
 
+impl Direction {
+    pub fn x(&self) -> f32 {
+        match self {
+            Direction::Left => -1.0,
+            Direction::Right => 1.0,
+        }
+    }
+    pub fn is_flip_x(&self) -> bool {
+        match self {
+            Direction::Left => true,
+            Direction::Right => false,
+        }
+    }
+}
+
 #[derive(Event)]
 pub struct Ended(Entity);
 
@@ -35,7 +50,7 @@ impl AnimationIndex {
     }
 }
 
-#[derive(Bundle)]
+#[derive(Bundle, Clone)]
 pub struct Animation {
     pub timer: AnimationTimer,
     pub index: AnimationIndex,
@@ -45,6 +60,27 @@ impl Animation {
         Animation {
             timer: AnimationTimer::new(duration / (end - start) as u64),
             index: AnimationIndex::new(start, end),
+        }
+    }
+}
+
+#[derive(Component)]
+pub struct SpriteAnimation {
+    pub texture: Handle<Image>,
+    pub layout: Handle<TextureAtlasLayout>,
+    pub animation: Animation,
+}
+
+impl SpriteAnimation {
+    pub fn new(
+        texture: Handle<Image>,
+        layout: Handle<TextureAtlasLayout>,
+        animation: Animation,
+    ) -> Self {
+        SpriteAnimation {
+            texture,
+            layout,
+            animation,
         }
     }
 }
@@ -79,7 +115,7 @@ fn animate(
                 return;
             }
             if next > indices.end {
-                next = 0;
+                next = indices.start;
             }
             atlas.index = next;
         }
@@ -88,6 +124,6 @@ fn animate(
 
 fn flip_x(mut sprites: Query<(&mut Sprite, &Direction), Changed<Direction>>) {
     for (mut sprite, dir) in &mut sprites {
-        sprite.flip_x = if *dir == Direction::Left { true } else { false };
+        sprite.flip_x = dir.is_flip_x()
     }
 }
