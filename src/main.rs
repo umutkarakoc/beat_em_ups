@@ -3,8 +3,10 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 use bevy::asset::AssetMetaCheck;
 use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
+use input::PlayerInput;
 use level::LevelPlugin;
 mod assets;
+mod input;
 mod level;
 mod menu;
 mod player;
@@ -61,6 +63,7 @@ fn main() {
             MenuPlugin,
             LevelPlugin,
             PlayerPlugin,
+            PlayerInput,
         ))
         .insert_state(GameState::Loading);
 

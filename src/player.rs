@@ -1,452 +1,269 @@
 use crate::assets::SamuraiAssets;
+use crate::input::Active;
 use crate::sprite_sheet::{
-    Animation, AnimationEnded, AnimationTimer, Direction, NoRepeat, SpriteAnimation,
+    self, Animation, AnimationEnded, AnimationTimer, NoRepeat, SpriteAnimation,
 };
-use crate::GameState;
+use crate::{input, GameState};
 use bevy::ecs::world::Command;
 use bevy::input::keyboard::KeyboardInput;
 use bevy::input::ButtonState;
 use bevy::prelude::*;
+use bevy::sprite::{MaterialMesh2dBundle, Mesh2dHandle};
 use rand::Rng;
 
 pub struct PlayerPlugin;
 
-#[derive(Component)]
-pub struct Player;
+trait Controller: Component + Default {}
+
+#[derive(Default, Component)]
+pub struct Controller1;
+
+impl Controller for Controller1 {}
+
+#[cfg_attr(Default, Controller, derive(Controller))]
+pub struct Controller2;
 
 #[derive(Component)]
-pub struct CharacterAnimations {
-    pub idle: SpriteAnimation,
-    pub run: SpriteAnimation,
-    pub attack1: SpriteAnimation,
-    pub attack2: SpriteAnimation,
-    pub attack3: SpriteAnimation,
-    pub defence: SpriteAnimation,
-    pub dash: SpriteAnimation,
-}
-
-#[derive(Component, Deref)]
-pub struct RunSpeed(pub f32);
-
-#[derive(Component, Deref)]
-pub struct AttackMoveSpeed(pub f32);
-
-#[derive(Component)]
-pub struct Enemy;
+pub struct Character;
 
 #[derive(Component)]
 pub struct Samurai;
 
 #[derive(Component)]
-pub struct Knight;
-
-#[derive(Component, Debug)]
-pub struct Idle;
-
-#[derive(Component, Debug)]
-pub struct Walk;
-
-#[derive(Component, Debug)]
-pub struct Run;
-
-#[derive(Component, Debug)]
-pub struct Attack(pub u32);
-
-#[derive(Component, Debug)]
-pub struct Defence;
-
-#[derive(Component, Debug)]
-pub struct Dash;
-
-#[derive(Component)]
-pub struct Jump;
-
-#[derive(Component)]
 pub struct Alive;
 
-#[derive(Component)]
-pub struct Dead;
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+struct ReadInputSet;
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+struct ActionSet;
 
 #[derive(Component)]
-pub struct Rest;
+pub struct LevelLimit;
 
-#[derive(Copy, Clone, Eq, PartialEq, Hash)]
-pub enum PlayerInput {
-    Key(KeyCode),
-    Mouse(MouseButton),
+#[derive(Component)]
+pub struct MoveSpeed {
+    walk: f32,
+    run: f32,
 }
 
 #[derive(Component)]
-pub struct LocalController {
-    left: PlayerInput,
-    right: PlayerInput,
-    up: PlayerInput,
-    down: PlayerInput,
-    attack: PlayerInput,
-    defense: PlayerInput,
-    dash: PlayerInput,
+pub struct Speed(f32);
+
+#[derive(Component)]
+pub struct Direction(f32, f32);
+
+#[derive(Component, Eq, PartialEq, Copy, Clone, Debug)]
+pub enum Movement {
+    Idle,
+    Walk,
+    Run,
 }
 
 /// This plugin handles player related stuff like movement
 /// Player logic is only active during the State `GameState::Playing`
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(ButtonInput::<PlayerInput>::default())
-            .add_systems(OnEnter(GameState::Playing), init)
-            .add_systems(Update, player_input)
-            .add_systems(Update, player_input_clear)
+        app.add_systems(OnEnter(GameState::Playing), init)
             .add_systems(
                 Update,
-                (
-                    init_samurai,
-                    idle_anim,
-                    attack_anim,
-                    action_anim_ended,
-                    run_anim,
-                    dash_anim,
-                    defence_anim,
-                )
+                (set_direction::<Controller1>, set_movement::<Controller1>)
+                    .in_set(ReadInputSet)
                     .run_if(in_state(GameState::Playing)),
             )
             .add_systems(
                 Update,
-                (
-                    set_direction,
-                    idle_to_run,
-                    run_to_idle,
-                    run,
-                    attack,
-                    combo_attack,
-                    dash,
-                    defence,
-                    attack_move,
-                )
-                    .run_if(run_if_player_alive)
-                    .after(player_input)
-                    .before(player_input_clear),
+                (limit, movement)
+                    .in_set(ActionSet)
+                    .after(ReadInputSet)
+                    .run_if(in_state(GameState::Playing)),
             )
-            .add_systems(PostUpdate, post_print);
+            .add_systems(
+                PostUpdate,
+                (flip_x, init_samurai, init_shadow, movement_animation)
+                    .run_if(in_state(GameState::Playing)),
+            );
     }
 }
 
 fn init(mut commands: Commands) {
-    commands.spawn((Name::new("Player"), Player, Samurai));
+    commands.spawn((Name::new("Player"), Character, Samurai, Controller1));
 }
 
-fn post_print() {
-    // println!("----------------------");
-}
-
-fn init_samurai(
-    mut commands: Commands,
-    players: Query<Entity, Added<Samurai>>,
-    assets: Res<SamuraiAssets>,
-) {
+fn init_samurai(mut commands: Commands, players: Query<Entity, Added<Samurai>>) {
     for id in &players {
         commands.entity(id).insert((
-            RunSpeed(200.),
-            AttackMoveSpeed(200.),
-            Idle,
+            MoveSpeed {
+                walk: 80.,
+                run: 200.,
+            },
+            Movement::Idle,
             Alive,
-            Direction::Right,
-            CharacterAnimations {
-                idle: SpriteAnimation {
-                    texture: assets.idle.clone(),
-                    layout: assets.idle_layout.clone(),
-                    animation: Animation::new(1000, 0, 3),
-                },
-                run: SpriteAnimation {
-                    texture: assets.run.clone(),
-                    layout: assets.run_layout.clone(),
-                    animation: Animation::new(600, 0, 7),
-                },
-                attack1: SpriteAnimation {
-                    texture: assets.attack1.clone(),
-                    layout: assets.attack1_layout.clone(),
-                    animation: Animation::new(200, 0, 3),
-                },
-                attack2: SpriteAnimation {
-                    texture: assets.attack2.clone(),
-                    layout: assets.attack2_layout.clone(),
-                    animation: Animation::new(200, 0, 4),
-                },
-                attack3: SpriteAnimation {
-                    texture: assets.attack3.clone(),
-                    layout: assets.attack3_layout.clone(),
-                    animation: Animation::new(200, 0, 3),
-                },
-                defence: SpriteAnimation {
-                    texture: assets.defence.clone(),
-                    layout: assets.defence_layout.clone(),
-                    animation: Animation::new(100, 0, 1),
-                },
-                dash: SpriteAnimation {
-                    texture: assets.dash.clone(),
-                    layout: assets.dash_layout.clone(),
-                    animation: Animation::new(400, 0, 5),
-                },
-            },
-            LocalController {
-                left: PlayerInput::Key(KeyCode::KeyA),
-                right: PlayerInput::Key(KeyCode::KeyD),
-                up: PlayerInput::Key(KeyCode::KeyW),
-                down: PlayerInput::Key(KeyCode::KeyS),
-                dash: PlayerInput::Key(KeyCode::Space),
-                attack: PlayerInput::Mouse(MouseButton::Left),
-                defense: PlayerInput::Mouse(MouseButton::Right),
-            },
+            Direction(1., 0.),
             SpriteBundle {
-                transform: Transform::from_xyz(-200., 0., 1.),
+                transform: Transform::from_xyz(-200., 0., 10.),
                 ..default()
             },
         ));
+
+        commands.spawn((
+            Controller1,
+            input::Analog(0., 0.),
+            input::Movement,
+            input::KeyboardAnalog(KeyCode::KeyW, KeyCode::KeyS, KeyCode::KeyD, KeyCode::KeyA),
+        ));
+        commands.spawn((
+            Controller1,
+            input::Run,
+            input::KeyboardAction(KeyCode::ShiftLeft),
+        ));
+        commands.spawn((
+            Controller1,
+            input::Attack,
+            input::MouseAction(MouseButton::Left),
+        ));
     }
 }
 
-fn run_if_player_alive(q_player: Query<&Player, (With<Alive>, Without<Dead>)>) -> bool {
-    if let Ok(_) = q_player.get_single() {
-        return true;
-    }
-    false
-}
-
-fn player_input(
-    mut input: ResMut<ButtonInput<PlayerInput>>,
-    mouse: Res<ButtonInput<MouseButton>>,
-    mut kbd: EventReader<KeyboardInput>,
-) {
-    for ev in kbd.read() {
-        match ev.state {
-            ButtonState::Pressed => input.press(PlayerInput::Key(ev.key_code)),
-            ButtonState::Released => input.release(PlayerInput::Key(ev.key_code)),
-        }
-    }
-
-    if mouse.just_pressed(MouseButton::Left) {
-        input.press(PlayerInput::Mouse(MouseButton::Left));
-    }
-    if mouse.just_pressed(MouseButton::Left) {
-        input.release(PlayerInput::Mouse(MouseButton::Left));
-    }
-    if mouse.just_pressed(MouseButton::Right) {
-        input.press(PlayerInput::Mouse(MouseButton::Right));
-    }
-    if mouse.just_pressed(MouseButton::Right) {
-        input.release(PlayerInput::Mouse(MouseButton::Right));
-    }
-}
-fn player_input_clear(mut input: ResMut<ButtonInput<PlayerInput>>) {
-    input.clear()
-}
-
-type CanActQuery = (
-    With<Alive>,
-    Without<Dead>,
-    Without<Attack>,
-    Without<Dash>,
-    Without<Rest>,
-    Without<Defence>,
-);
-
-fn set_direction(
+fn init_shadow(
     mut commands: Commands,
-    players: Query<(Entity, &LocalController), CanActQuery>,
-    keys: Res<ButtonInput<PlayerInput>>,
+    players: Query<Entity, Added<Character>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    mut meshes: ResMut<Assets<Mesh>>,
 ) {
-    for (entity, ctl) in &players {
-        let mut entity = commands.entity(entity);
-        if keys.just_pressed(ctl.left) {
-            entity.insert(Direction::Left);
-        }
-        if keys.just_pressed(ctl.right) {
-            entity.insert(Direction::Right);
-        }
+    for p in &players {
+        commands.entity(p).with_children(|p| {
+            let shadow = Mesh2dHandle(meshes.add(Ellipse::new(12., 6.)));
+            let color = materials.add(Color::linear_rgba(0., 0., 0., 0.5));
+            // let color = Color::hsl(360. * 1 as f32 / 2 as f32, 0.95, 0.7);
+
+            p.spawn((
+                Name::new("Shadow"),
+                MaterialMesh2dBundle {
+                    mesh: shadow,
+                    material: color,
+                    transform: Transform::from_xyz(0., -64., 0.),
+                    ..default()
+                },
+            ));
+        });
     }
 }
 
-fn idle_to_run(
+fn set_direction<C: Controller>(
     mut commands: Commands,
-    players: Query<(Entity, &LocalController), (CanActQuery, With<Idle>)>,
-    keys: Res<ButtonInput<PlayerInput>>,
+    player: Query<Entity, (With<C>, With<Character>)>,
+    movement: Query<&input::Analog, (With<input::Active>, With<C>, With<input::Movement>)>,
 ) {
-    for (entity, ctl) in &players {
-        let mut entity = commands.entity(entity);
-        if keys.any_pressed([ctl.left, ctl.right]) {
-            println!("run");
-            entity.remove::<Idle>().remove::<Dead>().insert(Run);
-        }
+    let Ok(player) = player.get_single() else {
+        return;
+    };
+
+    let Ok(&input::Analog(x, y)) = movement.get_single() else {
+        return;
+    };
+
+    if x == 0. && y == 0. {
+        commands.entity(player).insert(Direction(x, y));
+    } else {
+        commands.entity(player).insert(Direction(x, y));
     }
 }
 
-fn run_to_idle(
+fn set_movement<C: Controller>(
     mut commands: Commands,
-    players: Query<(Entity, &LocalController), (CanActQuery, With<Run>)>,
-    keys: Res<ButtonInput<PlayerInput>>,
+    player: Query<(Entity, &Movement), With<C>>,
+    input: Query<Entity, (With<input::Active>, With<C>, With<input::Movement>)>,
+    is_run: Query<(&input::Run, &Active)>,
 ) {
-    for (entity, ctl) in &players {
-        let mut entity = commands.entity(entity);
-        if !keys.any_pressed([ctl.left, ctl.right]) {
-            println!("idle");
-            entity.remove::<Run>().insert(Idle);
+    let Ok((entity, &movement)) = player.get_single() else {
+        return;
+    };
+
+    if input.is_empty() {
+        if movement != Movement::Idle {
+            commands.entity(entity).insert(Movement::Idle);
         }
+    } else if is_run.is_empty() {
+        if movement != Movement::Walk {
+            commands.entity(entity).insert(Movement::Walk);
+        }
+    } else if movement != Movement::Run {
+        commands.entity(entity).insert(Movement::Run);
     }
 }
 
-fn attack(
-    mut commands: Commands,
-    players: Query<(Entity, &LocalController), CanActQuery>,
-    keys: Res<ButtonInput<PlayerInput>>,
-) {
-    for (entity, ctl) in &players {
-        let mut entity = commands.entity(entity);
-        if keys.just_pressed(ctl.attack) {
-            println!("attack");
-            entity.remove::<Idle>().remove::<Run>().insert(Attack(1));
-        }
-    }
-}
-
-fn combo_attack(
-    mut commands: Commands,
-    players: Query<(Entity, &LocalController, &Attack, &AnimationTimer), With<Alive>>,
-    keys: Res<ButtonInput<PlayerInput>>,
-) {
-    return;
-    for (entity, ctl, attack, timer) in &players {
-        if timer.remaining_secs() > 0.1 {
-            continue;
-        }
-        let mut entity = commands.entity(entity);
-        println!("combo");
-        if keys.just_pressed(ctl.attack) {
-            entity
-                .remove::<Idle>()
-                .remove::<Run>()
-                .insert(Attack(attack.0 + 1));
-        }
-    }
-}
-
-fn defence(
-    mut commands: Commands,
-    players: Query<(Entity, &LocalController), CanActQuery>,
-    keys: Res<ButtonInput<PlayerInput>>,
-) {
-    for (entity, ctl) in &players {
-        let mut entity = commands.entity(entity);
-        if keys.just_pressed(ctl.defense) {
-            entity.remove::<Idle>().remove::<Run>().insert(Defence);
-        }
-    }
-}
-fn dash(
-    mut commands: Commands,
-    players: Query<(Entity, &LocalController), CanActQuery>,
-    keys: Res<ButtonInput<PlayerInput>>,
-) {
-    for (entity, ctl) in &players {
-        let mut entity = commands.entity(entity);
-        if keys.just_pressed(ctl.dash) {
-            entity.remove::<Idle>().remove::<Run>().insert(Dash);
-        }
-    }
-}
-
-fn run(
+fn movement(
     time: Res<Time>,
-    mut players: Query<(&mut Transform, &RunSpeed, &Direction), (CanActQuery, With<Run>)>,
+    mut players: Query<(&mut Transform, &Movement, &MoveSpeed, &Direction)>,
 ) {
-    for (mut t, speed, dir) in &mut players {
-        t.translation.x += **speed * dir.x() * time.delta_seconds();
-    }
-}
+    for (mut t, movement, speed, &Direction(x, y)) in &mut players {
+        if movement == &Movement::Idle {
+            return;
+        }
 
-fn attack_move(
-    time: Res<Time>,
-    mut players: Query<(&mut Transform, &AttackMoveSpeed, &Direction), With<Attack>>,
-) {
-    for (mut t, speed, dir) in &mut players {
-        t.translation.x += **speed * dir.x() * time.delta_seconds();
-    }
-}
-
-fn idle_anim(mut commands: Commands, players: Query<(Entity, &CharacterAnimations), Added<Idle>>) {
-    for (e, anims) in &players {
-        commands.entity(e).insert((
-            anims.idle.texture.clone(),
-            anims.idle.animation.clone(),
-            TextureAtlas::from(anims.idle.layout.clone()),
-        ));
-    }
-}
-
-fn run_anim(mut commands: Commands, players: Query<(Entity, &CharacterAnimations), Added<Run>>) {
-    for (e, anims) in &players {
-        commands.entity(e).insert((
-            anims.run.texture.clone(),
-            anims.run.animation.clone(),
-            TextureAtlas::from(anims.run.layout.clone()),
-        ));
-    }
-}
-
-fn attack_anim(
-    mut commands: Commands,
-    players: Query<(Entity, &CharacterAnimations), Added<Attack>>,
-) {
-    for (e, anims) in &players {
-        let i = rand::thread_rng().gen_range(1..=3);
-        let anim = match i {
-            1 => &anims.attack1,
-            2 => &anims.attack2,
-            _ => &anims.attack3,
+        let speed = if movement == &Movement::Walk {
+            speed.walk
+        } else {
+            speed.run
         };
-        commands.entity(e).insert((
-            anim.texture.clone(),
-            anim.animation.clone(),
-            NoRepeat,
-            TextureAtlas::from(anim.layout.clone()),
-        ));
+
+        let way = Vec3::new(x, y, 0.).normalize();
+        t.translation.x += speed * way.x * time.delta_seconds();
+        t.translation.y += speed * way.y * time.delta_seconds() * 0.6;
     }
 }
-fn dash_anim(mut commands: Commands, players: Query<(Entity, &CharacterAnimations), Added<Dash>>) {
-    for (e, anims) in &players {
-        commands.entity(e).insert((
-            anims.dash.texture.clone(),
-            anims.dash.animation.clone(),
-            NoRepeat,
-            TextureAtlas::from(anims.dash.layout.clone()),
-        ));
+
+fn flip_x(mut sprites: Query<(&mut Sprite, &Direction), Changed<Direction>>) {
+    for (mut sprite, &Direction(x, _y)) in &mut sprites {
+        sprite.flip_x = x < 0.;
     }
 }
-fn defence_anim(
+
+fn limit(mut players: Query<&mut Transform, With<Character>>) {
+    for mut t in &mut players {
+        if t.translation.y > 35. {
+            t.translation.y = 35.;
+        }
+        if t.translation.y < -40. {
+            t.translation.y = -40.;
+        }
+        if t.translation.x < -200. {
+            t.translation.x = -200.;
+        }
+        if t.translation.x > 200. {
+            t.translation.x = 200.;
+        }
+    }
+}
+
+fn movement_animation(
     mut commands: Commands,
-    players: Query<(Entity, &CharacterAnimations), Added<Defence>>,
+    players: Query<(Entity, &Movement), (With<Samurai>, Changed<Movement>)>,
+    assets: Res<SamuraiAssets>,
 ) {
-    for (e, anims) in &players {
-        commands.entity(e).insert((
-            anims.defence.texture.clone(),
-            anims.defence.animation.clone(),
-            NoRepeat,
-            TextureAtlas::from(anims.defence.layout.clone()),
-        ));
-    }
-}
-fn action_anim_ended(
-    mut commands: Commands,
-    mut ended: EventReader<AnimationEnded>,
-    players: Query<Entity>,
-) {
-    for &AnimationEnded(entity) in ended.read() {
-        if let Ok(player) = players.get(entity) {
-            println!("ended");
-            commands
-                .entity(player)
-                .remove::<Attack>()
-                .remove::<Defence>()
-                .remove::<Dash>()
-                .remove::<NoRepeat>()
-                .insert(Idle);
-        };
+    for (e, &movement) in &players {
+        match movement {
+            Movement::Idle => {
+                commands.entity(e).insert((
+                    assets.idle.clone(),
+                    TextureAtlas::from(assets.idle_layout.clone()),
+                    Animation::new(1000, 0, 3),
+                ));
+            }
+            Movement::Walk => {
+                commands.entity(e).insert((
+                    assets.walk.clone(),
+                    TextureAtlas::from(assets.walk_layout.clone()),
+                    Animation::new(1000, 0, 8),
+                ));
+            }
+            Movement::Run => {
+                commands.entity(e).insert((
+                    assets.run.clone(),
+                    TextureAtlas::from(assets.run_layout.clone()),
+                    Animation::new(600, 0, 7),
+                ));
+            }
+        }
     }
 }

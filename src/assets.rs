@@ -1,8 +1,5 @@
-use crate::{
-    sprite_sheet::{Animation, SpriteAnimation},
-    GameState,
-};
-use bevy::{prelude::*, utils::HashMap};
+use crate::GameState;
+use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
 use bevy_kira_audio::AudioSource;
 
@@ -50,6 +47,9 @@ pub struct KnightAssets {
     #[asset(path = "knight/idle.png")]
     pub idle: Handle<Image>,
 
+    #[asset(texture_atlas_layout(tile_size_x = 128, tile_size_y = 128, columns = 9, rows = 1))]
+    pub walk_layout: Handle<TextureAtlasLayout>,
+
     #[asset(path = "knight/walk.png")]
     pub walk: Handle<Image>,
 
@@ -69,10 +69,10 @@ pub struct SamuraiAssets {
     pub idle: Handle<Image>,
 
     #[asset(texture_atlas_layout(tile_size_x = 128, tile_size_y = 128, columns = 2, rows = 1))]
-    pub defence_layout: Handle<TextureAtlasLayout>,
+    pub defense_layout: Handle<TextureAtlasLayout>,
 
     #[asset(path = "samurai/protection.png")]
-    pub defence: Handle<Image>,
+    pub defense: Handle<Image>,
 
     #[asset(texture_atlas_layout(tile_size_x = 128, tile_size_y = 128, columns = 6, rows = 1))]
     pub dash_layout: Handle<TextureAtlasLayout>,
@@ -80,14 +80,34 @@ pub struct SamuraiAssets {
     #[asset(path = "samurai/roll.png")]
     pub dash: Handle<Image>,
 
+    #[asset(texture_atlas_layout(tile_size_x = 128, tile_size_y = 128, columns = 9, rows = 1))]
+    pub walk_layout: Handle<TextureAtlasLayout>,
     #[asset(path = "samurai/walk.png")]
     pub walk: Handle<Image>,
+
+    #[asset(texture_atlas_layout(tile_size_x = 128, tile_size_y = 128, columns = 1, rows = 1))]
+    pub hold_attack_layout: Handle<TextureAtlasLayout>,
+
+    #[asset(path = "samurai/hold_attack.png")]
+    pub hold_attack: Handle<Image>,
+
+    #[asset(texture_atlas_layout(tile_size_x = 128, tile_size_y = 128, columns = 9, rows = 1))]
+    pub walk_hold_attack_layout: Handle<TextureAtlasLayout>,
+
+    #[asset(path = "samurai/hold_attack.png")]
+    pub walk_hold_attack: Handle<Image>,
 
     #[asset(texture_atlas_layout(tile_size_x = 128, tile_size_y = 128, columns = 8, rows = 1))]
     pub run_layout: Handle<TextureAtlasLayout>,
 
     #[asset(path = "samurai/run.png")]
     pub run: Handle<Image>,
+
+    #[asset(texture_atlas_layout(tile_size_x = 128, tile_size_y = 128, columns = 6, rows = 1))]
+    pub attack_layout: Handle<TextureAtlasLayout>,
+
+    #[asset(path = "samurai/special_attack_1.png")]
+    pub attack: Handle<Image>,
 
     #[asset(texture_atlas_layout(tile_size_x = 128, tile_size_y = 128, columns = 4, rows = 1))]
     pub attack1_layout: Handle<TextureAtlasLayout>,
